@@ -1,0 +1,16 @@
+version: '3'
+services:
+  flyway:
+    image: csye712504/flyway
+    env_file:
+      - .env
+    depends_on: 
+      - db
+    # entrypoint: /bin/bash -c "until ping db; do echo waiting for database; sleep 2; done; flyway info"
+  db:
+    image: mysql
+    environment: 
+      - name=root
+      - MYSQL_ROOT_PASSWORD=Smv@12345
+    ports:
+      - 3307:3306
