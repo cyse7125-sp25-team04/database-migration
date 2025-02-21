@@ -33,6 +33,8 @@ pipeline{
                         }
                     }
                     
+                    println "Full path: ${REPO_OWNER}/${REPO_NAME}"
+
                     withCredentials([string(credentialsId: 'shalom-PAT', variable: 'GITHUB_TOKEN')]) {
                         try {
                             // Run the shell command to delete all local git tags
@@ -43,8 +45,8 @@ pipeline{
                         }
 
                         try {
-                            // Ensure remote is added before running fetch with --all
-                            sh 'git remote add origin https://$GITHUB_TOKEN@github.com/${REPO_OWNER}/${REPO_NAME}.git || true'
+                            // sh 'git remote add origin https://$GITHUB_TOKEN@github.com/${REPO_OWNER}/${REPO_NAME}.git'
+                            sh 'git remote set-url origin https://$GITHUB_TOKEN@github.com/cyse7125-sp25-team04/database-migration.git'
                             // Fetch all remotes and tags
                             sh 'git fetch --all --tags'
                             echo "Successfully fetched all tags from all remotes."
@@ -56,9 +58,13 @@ pipeline{
                             script: "git tag -l --sort=-version:refname | head -n 1",
                             returnStdout: true
                         ).trim()
-                        
-                        // If latestTag is empty or doesn't match the pattern 'vN.N.N', default to '0.0.0'
-                        CURRENT_VERSION = (latestTag && latestTag.matches("^v\\d+\\.\\d+\\.\\d+$")) ? latestTag : '0.0.0'
+
+                        // if no tag is present in the repo
+                        if (!latestTag.matches(/^v\d+\.\d+\.\d+$/)) {
+                            latestTag = "v0.0.0"
+                        }
+                        CURRENT_VERSION = latestTag
+
                         // Print the latest tag
                         echo "Latest Tag: ${CURRENT_VERSION}"
                     }
@@ -69,7 +75,7 @@ pipeline{
         stage("Determine Version Bump") {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'git-credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                    withCredentials([string(credentialsId: 'shalom-PAT', variable: 'GITHUB_TOKEN')]) {
                         // Get the latest commit message
                         def commitMessage = sh(
                             script: "git log -1 --pretty=%B",
@@ -104,7 +110,7 @@ pipeline{
                         // Create and push git tag
                         sh """
                             git tag -a ${NEW_VERSION} -m "Release version ${NEW_VERSION}"
-                            git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${REPO_OWNER}/${REPO_NAME}.git ${NEW_VERSION}
+                            git push https://$GITHUB_TOKEN@github.com/${REPO_OWNER}/${REPO_NAME}.git ${NEW_VERSION}
                         """
                     }
                 }
